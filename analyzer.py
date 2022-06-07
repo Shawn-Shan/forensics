@@ -333,7 +333,7 @@ class Unlearner(object):
                 if self.verbose or verbose:
                     print("Unlearn ACC: {:.2f} - Rest ACC: {:.2f}".format(unlearn_acc, rest_acc))
                     print("{} Unlearn L: {:.4f} - Rest L: {:.4f}".format(i, loss_unlearn, loss_rest, loss_ewc))
-                    print("Attack Confidence: {:.2f} - Normal Acc: {:.2f} Attack Loss: {:.2f}} - Normal Loss: {:.2f}\n".format(
+                    print("Attack Confidence: {:.2f} - Normal Acc: {:.2f} Attack Loss: {:.2f} - Normal Loss: {:.2f}\n".format(
                         attack_prob_mean, normal_acc, attack_loss_mean, normal_loss))
 
                     if unlearn_acc < 0.02 and rest_acc > 0.97:  # Early stop condition

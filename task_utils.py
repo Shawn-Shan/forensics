@@ -52,6 +52,7 @@ def get_model(dataset, load_clean=False):
         model = keras.models.load_model("models/cifar_clean.h5")
     else:
         model = create_model()
+        # model = keras.models.load_model("/home/shansixioing/forensic/wide_resnets_keras-master/models/WRN-28-10-download.h5")
     return model
 
 

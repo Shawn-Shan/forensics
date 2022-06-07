@@ -86,7 +86,6 @@ def main():
         callbacks = [eval_callback, LearningRateScheduler(schedule=schedule)]
         start_lr = 0.1
 
-    # new_model = create_model()
     new_model = task.model
 
     sgd = SGD(lr=start_lr, momentum=0.9, nesterov=True)
