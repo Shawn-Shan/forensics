@@ -35,6 +35,10 @@ Running traceback leverages two scripts. `gen_embs.py` will generate the embeddi
 
 First, run `python3 gen_embs.py --config cifar2 --gpu 0` to generate embedding, which will be saved under `results/`. Then run `python3 run_traceback.py --config cifar2 --gpu 0`. It should perform clustering and pruning. The unlearning process will be printed out. At the end, it will output the final precision and recall. 
 
+#### Things to keep in mind when adapting to new dataset/model
+
+- During unlearning process, make sure to set the training parameters identical to ones used during the initial model training. This includes augmentation, learning rate, and optimizers. If you found the unlearning process to be unstable, please reduce the learning rate or add gradient clipping. If the issue persist, please reach out to us via shawnshan@cs.uchicago.edu. 
+
 ### Citation
 ```
 @inproceedings{shan2022traceback,
