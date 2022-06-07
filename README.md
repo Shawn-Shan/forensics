@@ -33,7 +33,7 @@ The `--config` argument will load a config file under the `config` directory. Fe
 
 Running traceback leverages two scripts. `gen_embs.py` will generate the embedding needed for clustering and `run_traceback.py` performs traceback using generated embeddings and unlearning. 
 
-
+First, run `python3 gen_embs.py --config cifar2 --gpu 0` to generate embedding, which will be saved under `results/`. Then run `python3 run_traceback.py --config cifar2 --gpu 0`. It should perform clustering and pruning. The unlearning process will be printed out. At the end, it will output the final precision and recall. 
 
 ### Citation
 ```
