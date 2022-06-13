@@ -1,22 +1,19 @@
 import argparse
 import os
+import random
+import shutil
 import sys
 
 import keras.models
-
-import numpy as np
-
-import tensorflow as tf
-from sklearn.preprocessing import normalize
-from inject_utils import eval_attack
-from task_utils import load_attack
-import random
 import matplotlib.pyplot as plt
-import shutil
+import numpy as np
+import tensorflow as tf
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import normalize
 
 import gen_utils
-
-from sklearn.decomposition import PCA
+from inject_utils import eval_attack
+from task_utils import load_attack
 
 BASE_DIR = 'results'
 
@@ -48,24 +45,38 @@ def main():
     injected_Y_test = injected_Y_test[succ_attack_idx]
 
     attack_accuracy = eval_attack(model, injected_X_test, injected_Y_test)[1]
-    assert attack_accuracy > 0.9
+    assert attack_accuracy > 0.6
     classification_accuracy = eval_attack(model, X_test, Y_test)[1]
     print("classification_accuracy: {:.2f}".format(classification_accuracy))
 
     task.model = model
-    model.summary()
-    layer_of_interest = model.trainable_variables[-1]
+    # model.summary()
+    for l in model.layers:
+        l.trainable = True
+
+    layer_of_interest = None
+    for idx, variable in enumerate(model.trainable_variables[::-1][:10]):
+        if "kernel" in variable.name.lower():
+            layer_of_interest = variable
+            break
+
+    if (layer_of_interest is None) or len(layer_of_interest.shape) != 2:
+        raise Exception("Selected Layer is problematic. Please check you have a dense layer at the end of the model. ")
+    print("Selected Layer: ", layer_of_interest.name)
 
     full_size_of_embedding = layer_of_interest.shape[0] * layer_of_interest.shape[1]
+
+    print("Full embedding size: {}".format(full_size_of_embedding))
     size_kept = int(full_size_of_embedding * args.ratio)
-    if size_kept > 10000:
-        size_kept = 10000
+    if size_kept > 50000:
+        size_kept = 50000
 
     kept_mask = random.sample(list(range(full_size_of_embedding)), size_kept)
     gradient_list = np.zeros((number_train, size_kept))
 
     print("Shape: ", gradient_list.shape)
     for i, batch_i in enumerate(range(0, number_train, BATCH_SIZE)):
+        print("Batch: ", i)
         inputs = injected_X[batch_i:batch_i + BATCH_SIZE]
         labels = injected_Y[batch_i:batch_i + BATCH_SIZE]
 
@@ -74,9 +85,13 @@ def main():
             labels = tf.ones(labels.shape) * 1 / num_classes
             loss = tf.keras.losses.categorical_crossentropy(labels, ypred)
         jacobian = tape.jacobian(loss, layer_of_interest)
+        jacobian = np.array(jacobian)
         jacobian = np.reshape(jacobian, (len(inputs), -1))
         reduced_jacobian = jacobian[:, kept_mask]
         gradient_list[batch_i:batch_i + BATCH_SIZE] = reduced_jacobian
+        # np.sum(np.abs(jacobian), axis=1)
+        # import pdb
+        # pdb.set_trace()
 
     gradients = np.array(gradient_list.reshape(number_train, -1))
     embedding = gradients
@@ -89,13 +104,13 @@ def main():
     normalized_embedding = normalize(embedding)
     os.mkdir(cur_results_dir)
 
+    np.save(os.path.join(cur_results_dir, "embedding_norm.p"), normalized_embedding)
+    np.save(os.path.join(cur_results_dir, "embedding.p"), embedding)
+
     if args.pca:
         plot_pca(embedding, is_backdoor_ls, injected_Y, task.target_label, os.path.join(cur_results_dir, "pca.png"))
         plot_pca(normalized_embedding, is_backdoor_ls, injected_Y, task.target_label,
                  os.path.join(cur_results_dir, "pca_norm.png"))
-
-    np.save(os.path.join(cur_results_dir, "embedding_norm.p"), normalized_embedding)
-    np.save(os.path.join(cur_results_dir, "embedding.p"), embedding)
 
 
 def plot_pca(cur_embs, is_backdoor_ls, injected_Y, target_y, output_file):
@@ -116,9 +131,9 @@ def plot_pca(cur_embs, is_backdoor_ls, injected_Y, target_y, output_file):
 
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', type=str,
+    parser.add_argument('--gpu', '-g', type=str,
                         help='GPU id', default='0')
-    parser.add_argument('--config', type=str,
+    parser.add_argument('--config', '-c', type=str,
                         help='name of dataset', default='cifar1')
     parser.add_argument('--pca', action='store_true')
     parser.add_argument('--ratio', '-r', type=float,

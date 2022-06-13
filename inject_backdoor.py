@@ -23,7 +23,7 @@ BATCH_SIZE = 128
 
 
 def schedule(epoch_idx):
-    lr_schedule = [50, 80, 95]  # epoch_step
+    lr_schedule = [15, 25, 35]  # epoch_step
     if (epoch_idx + 1) < lr_schedule[0]:
         return 0.1
     elif (epoch_idx + 1) < lr_schedule[1]:
@@ -38,6 +38,9 @@ def main():
     np.random.seed(args["seed"])
 
     gen_utils.init_gpu(args["gpu"])
+    print("Successfully Init GPU")
+
+    print("Start preparing dataset... ")
 
     task = Task(args["dataset"], load_clean=args["pretrain"])
 
@@ -65,6 +68,7 @@ def main():
                                                    task.num_classes)
     injected_X_test, injected_Y_test, _ = inject_data(X_test, Y_test, target_ls, 1.0, pattern_dict,
                                                       task.num_classes)
+    print("Finished preparing dataset. ")
 
     RES['injected_X'] = injected_X
     RES['injected_Y'] = injected_Y
@@ -108,6 +112,7 @@ def main():
         new_model.fit(final_gen, callbacks=callbacks, epochs=args['epochs'],
                       steps_per_epoch=num_train, verbose=1)
     except KeyboardInterrupt:
+        print("Early stopping, saving current model...")
         pass
 
     new_model.save(model_file)
@@ -116,12 +121,11 @@ def main():
     RES['clean_acc'] = clean_acc
     RES['attack_acc'] = attack_acc
 
-    if not CHECK_RUN:
-        os.makedirs(MODEL_PREFIX, exist_ok=True)
-        os.makedirs(DIRECTORY, exist_ok=True)
+    os.makedirs(MODEL_PREFIX, exist_ok=True)
+    os.makedirs(DIRECTORY, exist_ok=True)
 
-        file_save_path = file_prefix + "_res.p"
-        pickle.dump(RES, open(file_save_path, 'wb'))
+    file_save_path = file_prefix + "_res.p"
+    pickle.dump(RES, open(file_save_path, 'wb'))
 
 
 def parse_arguments(argv):

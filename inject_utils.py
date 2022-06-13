@@ -157,6 +157,8 @@ class CallbackGenerator(keras.callbacks.Callback):
         clean_acc, attack_acc = eval_clean_and_attack(self.model, self.X_test, self.Y_test, self.injected_X_test,
                                                       self.injected_Y_test)
         print("Epoch: {} - Clean Acc {:.4f} - Backdoor Acc {:.4f}".format(epoch, clean_acc, attack_acc))
+        if clean_acc > 0.90 and attack_acc == 1.0:
+            self.model.stop_training = True
         return clean_acc, attack_acc
 
 

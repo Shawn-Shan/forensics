@@ -4,6 +4,6 @@
   "target": 4,
   "pattern_size": 4,
   "seed": 1234,
-  "epochs": 100,
+  "epochs": 50,
   "pretrain": 0
 }

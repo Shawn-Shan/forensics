@@ -11,9 +11,10 @@ import gen_utils
 import argparse
 from analyzer import Analyzer
 
+# np.random.seed(1234)
 
 def main():
-    learning_rate = 0.008  # Please set this carefully depends on your training configuration. Use the last learning rate at the end of training, if you have build in adaptive learning rate. If notice the unlearning is highly unstable, reduce the learning rate to a smaller value
+    learning_rate = 0.004  # Please set this carefully depends on your training configuration. Use the last learning rate at the end of training, if you have build in adaptive learning rate. If notice the unlearning is highly unstable, reduce the learning rate to a smaller value
     gen_utils.init_gpu(args.gpu)
     config = args.config
     CLUSTER_DIR = 'results'
@@ -41,7 +42,7 @@ def main():
     task.is_backdoor_ls = is_backdoor_ls
     task.target_label = target_label
 
-    embedding = np.load(os.path.join(CLUSTER_DIR, "{}/embedding.p.npy".format(config)))
+    embedding = np.load(os.path.join(CLUSTER_DIR, "{}/embedding_norm.p.npy".format(config)))
 
     print("Embedding Shape: {}".format(embedding.shape))
 
@@ -52,7 +53,7 @@ def main():
     final_results = analyzer.run_clustering()
     cur_res = analyzer.report(final_results)
     print("*" * 80)
-    print("Final Traceback Results: Precision = {} | Recall = {}".format(cur_res['Precision'], cur_res["recall"]))
+    print("Final Traceback Results: Precision = {:.4f} | Recall = {:.4f}".format(cur_res['precision'], cur_res["recall"]))
     print("DONE")
 
 

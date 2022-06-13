@@ -3,10 +3,14 @@ import os
 
 import gen_utils
 import keras
-from keras.layers import Dense, Activation
-from keras.models import Model
 from tensorflow.keras.utils import to_categorical
 
+from keras.layers import Dense, Activation
+from keras.models import Model
+from keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, Activation, Dropout, BatchNormalization
+from keras.models import Model
+from keras.models import Sequential
+from keras.regularizers import l2
 from wide_resnet import create_model
 
 
@@ -51,9 +55,58 @@ def get_model(dataset, load_clean=False):
     if load_clean:
         model = keras.models.load_model("models/cifar_clean.h5")
     else:
-        model = create_model()
-        # model = keras.models.load_model("/home/shansixioing/forensic/wide_resnets_keras-master/models/WRN-28-10-download.h5")
+        # model = create_model()
+        model = get_cifar_model()
     return model
+
+
+def get_cifar_model(softmax=True):
+    layers = [
+        Conv2D(32, (3, 3), padding='same', input_shape=(32, 32, 3)),  # 0
+        Activation('relu'),  # 1
+        BatchNormalization(),  # 2
+        Conv2D(32, (3, 3), padding='same'),  # 3
+        Activation('relu'),  # 4
+        BatchNormalization(),  # 5
+        MaxPooling2D(pool_size=(2, 2)),  # 6
+
+        Conv2D(64, (3, 3), padding='same'),  # 7
+        Activation('relu'),  # 8
+        BatchNormalization(),  # 9
+        Conv2D(64, (3, 3), padding='same'),  # 10
+        Activation('relu'),  # 11
+        BatchNormalization(),  # 12
+        MaxPooling2D(pool_size=(2, 2)),  # 13
+
+        Conv2D(128, (3, 3), padding='same'),  # 14
+        Activation('relu'),  # 15
+        BatchNormalization(),  # 16
+        Conv2D(128, (3, 3), padding='same'),  # 17
+        Activation('relu'),  # 18
+        BatchNormalization(),  # 19
+        MaxPooling2D(pool_size=(2, 2)),  # 20
+
+        Flatten(),  # 21
+        Dropout(0.2),  # 22
+
+        Dense(2048, kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)),  # 23
+        Activation('relu'),  # 24
+        BatchNormalization(),  # 25
+
+        Dense(512, kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)),  # 27
+        Activation('relu'),  # 28
+        BatchNormalization(),  # 29
+        Dense(10),  # 31
+    ]
+
+    model = Sequential()
+
+    for layer in layers:
+        model.add(layer)
+    if softmax:
+        model.add(Activation('softmax'))
+    return model
+
 
 
 def load_dataset(dataset, test_only=False):

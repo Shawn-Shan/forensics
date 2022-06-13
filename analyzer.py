@@ -67,8 +67,9 @@ class Analyzer(object):
 
             backdoor_ratio, total_backdoor_ratio = self._backdoor_ratio(r)
             if self.verbose:
-                print("Current Backdoor Ratio: {:.4f}, consist {:.4f} of all backdoor".format(backdoor_ratio,
-                                                                                              total_backdoor_ratio))
+                print("Current Backdoor Ratio: {:.3f}, consist {:.3f} of all backdoor, {} images".format(backdoor_ratio,
+                                                                                                         total_backdoor_ratio,
+                                                                                                         len(r)))
 
             if not self.pass_unlearning:
                 results = self.unlearner.is_bad(r, verbose=self.verbose)
@@ -82,6 +83,8 @@ class Analyzer(object):
                     print("correct GOOD")
                 else:
                     print("\x1b[31m\"WRONG\"\x1b[0m")
+            else:
+                results = total_backdoor_ratio > 0.5 or backdoor_ratio > 0.1
 
             if results:
                 is_bad_ls.append(True)
@@ -99,7 +102,10 @@ class Analyzer(object):
         final_bad_indices = []
         root_index = list(range(0, len(self.X_train)))
         queue = [[root_index, 0, self._backdoor_ratio(root_index)]]
+        tot_idx = 0
         while queue:
+            print("Cluster: {}".format(tot_idx))
+            tot_idx += 1
             cur_indices, level, backdoor_ratio = queue.pop()
             cur_embs = self.embs[cur_indices]
             cur_mapping = dict((k, v) for k, v in enumerate(cur_indices))
@@ -166,20 +172,17 @@ class Unlearner(object):
 
         self.original_weights = original_model.get_weights()
         self.model = original_model
-        for l in self.model.layers[:-1]:
+        for l in self.model.layers:
             l.trainable = False
+
+        for l in self.model.layers[::-1]:
+            if 'dense' in l.name.lower():
+                l.trainable = True
+                break
 
         self.injected_X_test = analyzer.task.injected_X_test
         self.injected_Y_test = analyzer.task.injected_Y_test
         self.verbose = verbose
-
-        incident_idx = 100
-        self.cur_incident_X = self.injected_X_test[incident_idx:incident_idx + 1]
-        self.cur_incident_Y = self.injected_Y_test[incident_idx:incident_idx + 1]
-        self.cur_incident_correct_Y = self.analyzer.Y_test[incident_idx:incident_idx + 1]
-
-        self.clean_test_X = self.analyzer.X_test
-        self.clean_test_Y = self.analyzer.Y_test
 
         self.loader = data_loader
         self.augmentation = tf.keras.Sequential([
@@ -207,8 +210,8 @@ class Unlearner(object):
         random.shuffle(unlearn_index)
 
         backdoor_ratio, total_backdoor_ratio = self.analyzer._backdoor_ratio(unlearn_index)
-        print("Unlearn Backdoor Ratio: {:.4f}, consist {:.4f} of all backdoor".format(backdoor_ratio,
-                                                                                      total_backdoor_ratio))
+        # print("Unlearn Backdoor Ratio: {:.4f}, consist {:.4f} of all backdoor".format(backdoor_ratio,
+        #                                                                               total_backdoor_ratio))
         self.ratio_unlearn = backdoor_ratio
 
         backdoor_ratio, total_backdoor_ratio = self.analyzer._backdoor_ratio(rest_index)
@@ -229,9 +232,13 @@ class Unlearner(object):
         return unlearn_train_X, unlearn_train_Y, rest_train_X, rest_train_Y
 
     def eval_new_model(self, verbose=1):
-        attack_loss, attack_prob = eval_incident(self.model, self.injected_X_test[0:1],
-                                                 self.injected_Y_test[0:1],
+        idx = random.choice(range(len(self.injected_X_test) - 1))
+        attack_loss, attack_prob = eval_incident(self.model, self.injected_X_test[idx:idx+1],
+                                                 self.injected_Y_test[idx:idx+1],
                                                  avg=False)
+        # attack_loss, attack_prob = eval_incident(self.model, self.injected_X_test[0:1],
+        #                                          self.injected_Y_test[0:1],
+        #                                          avg=False)
 
         normal_loss, normal_acc = eval_attack(self.model, self.sub_X, self.sub_Y)
 
@@ -246,7 +253,7 @@ class Unlearner(object):
             tf.cast(tf.math.argmax(ypred, axis=1) == tf.math.argmax(labels, axis=1), tf.float32)).numpy()
         return acc
 
-    def collect_gradient(self, unlearn_train_X, unlearn_train_Y, rest_train_X, rest_train_Y, unlearn_i, rest_i):
+    def collect_gradient(self, unlearn_train_X, unlearn_train_Y, rest_train_X, rest_train_Y, unlearn_i, rest_i, cost=1.0):
         unlearn_inputs = unlearn_train_X[unlearn_i:unlearn_i + self.batch_size]
         unlearn_labels = unlearn_train_Y[unlearn_i:unlearn_i + self.batch_size]
         rest_inputs = rest_train_X[rest_i:rest_i + self.batch_size]
@@ -274,10 +281,10 @@ class Unlearner(object):
             rest_acc = self.acc(ypred, rest_labels)
             loss_rest = tf.reduce_sum(loss_rest) / len(loss_rest)
 
-            if unlearn_acc < 0.01:  # Set the unlearning loss to 0 when accuracy on unlearning set is very low => this entire the entire model does not collapse.
+            if unlearn_acc < 0.01:  # Set the unlearning loss to 0 when accuracy on unlearning set is very low => this ensure the entire model does not collapse.
                 loss = loss_rest * self.batch_size
             else:
-                loss = (loss_unlearn + loss_rest) * self.batch_size
+                loss = (loss_unlearn * cost + loss_rest) * self.batch_size
 
         g = tape.gradient(loss, self.model.trainable_variables)
 
@@ -289,12 +296,12 @@ class Unlearner(object):
         if rest_i > len(rest_train_X):
             rest_i = 0
 
-        loss_ewc = 0
-        return g, unlearn_i, rest_i, np.mean(loss_unlearn), np.mean(loss_rest), np.mean(loss_ewc), np.mean(
+        return g, unlearn_i, rest_i, np.mean(loss_unlearn), np.mean(loss_rest), np.mean(
             unlearn_acc), np.mean(rest_acc)
 
     def is_bad(self, unlearn_index, verbose=1):
         self.model = self.reset_model()
+        cost = 1.0
 
         unlearn_train_X, unlearn_train_Y, rest_train_X, rest_train_Y = self.filter_data(unlearn_index)
 
@@ -310,34 +317,44 @@ class Unlearner(object):
         unlearn_i = 0
         rest_i = 0
 
-        update_unlearn, _, _, loss_unlearn, loss_rest, loss_ewc, unlearn_acc, rest_acc = self.collect_gradient(
+        optimizer = SGD(lr=self.unlearning_lr, momentum=0.9, nesterov=True, clipvalue=0.05) # For customization, please change the optimizer to the same as you used to train the model. But make sure to keep "clipvalue" to ensure the gradient does not explode.
+
+        n_steps = len(unlearn_train_X) // self.batch_size * 2
+        if n_steps < 100:
+            n_steps = 100
+
+        _, _, _, org_loss_unlearn, org_loss_rest, org_unlearn_acc, org_rest_acc = self.collect_gradient(
             unlearn_train_X, unlearn_train_Y, rest_train_X, rest_train_Y, unlearn_i, rest_i)
-
-        optimizer = SGD(lr=self.unlearning_lr, momentum=0.9, nesterov=True, clipvalue=0.05)
-
-        n_steps = len(unlearn_train_X) // self.batch_size * 3
-        if n_steps < 40:
-            n_steps = 40
+        lowest_unlearn_acc = org_unlearn_acc
 
         for i in range(0, n_steps):
-            update_unlearn, unlearn_i, rest_i, loss_unlearn, loss_rest, loss_ewc, unlearn_acc, rest_acc = self.collect_gradient(
-                unlearn_train_X, unlearn_train_Y, rest_train_X, rest_train_Y, unlearn_i, rest_i)
-            optimizer.apply_gradients(zip(update_unlearn, self.model.trainable_variables))
+            update_unlearn, unlearn_i, rest_i, loss_unlearn, loss_rest, unlearn_acc, rest_acc = self.collect_gradient(
+                unlearn_train_X, unlearn_train_Y, rest_train_X, rest_train_Y, unlearn_i, rest_i, cost=cost)
 
-            if (i % (n_steps // 10) == 0 and (self.verbose or verbose)) or i + 1 == n_steps:
+            assert len(self.model.trainable_variables) > 0
+            optimizer.apply_gradients(zip(update_unlearn, self.model.trainable_variables))
+            if unlearn_acc < lowest_unlearn_acc:
+                lowest_unlearn_acc = unlearn_acc
+
+            if (i % (n_steps // 20) == 0 and (self.verbose or verbose)) or i + 1 == n_steps:
                 attack_loss, attack_prob, normal_loss, normal_acc = self.eval_new_model(verbose=0)
                 attack_prob_mean = np.percentile(attack_prob, 50)
-
                 attack_loss_mean = np.percentile(attack_loss, 50)
 
                 if self.verbose or verbose:
                     print("Unlearn ACC: {:.2f} - Rest ACC: {:.2f}".format(unlearn_acc, rest_acc))
-                    print("{} Unlearn L: {:.4f} - Rest L: {:.4f}".format(i, loss_unlearn, loss_rest, loss_ewc))
+                    print("{} Unlearn L: {:.4f} - Rest L: {:.4f}".format(i, loss_unlearn, loss_rest))
                     print("Attack Confidence: {:.2f} - Normal Acc: {:.2f} Attack Loss: {:.2f} - Normal Loss: {:.2f}\n".format(
                         attack_prob_mean, normal_acc, attack_loss_mean, normal_loss))
 
-                    if unlearn_acc < 0.02 and rest_acc > 0.97:  # Early stop condition
-                        break
+                if unlearn_acc < 0.08 and rest_acc > org_rest_acc * 0.95:  # Early stop condition
+                    break
+
+        if lowest_unlearn_acc > 0.6:
+            print("WARNING: Learning rate might not be large enough!")
+
+        if rest_acc < 0.5:
+            print("WARNING: Learning rate might be too large!")
 
         self.model = self.reset_model()
         delta = attack_loss_mean - original_attack_loss_mean
