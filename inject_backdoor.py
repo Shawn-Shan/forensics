@@ -130,7 +130,7 @@ def main():
 
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', '-c', type=str, help='GPU id', default='')
+    parser.add_argument('--config', '-c', type=str, help='config id', default='')
     parser.add_argument('--gpu', '-g', type=str, help='GPU id', default='0')
 
     args = parser.parse_args(argv)

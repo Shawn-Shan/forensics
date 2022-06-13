@@ -48,7 +48,7 @@ def main():
 
     model = keras.models.load_model(f"models/{dataset}_{config}_model.h5")
     analyzer = Analyzer(embedding, task, model, num_clusters=2, verbose=1,
-                        pass_unlearning=False, unlearning_lr=learning_rate)
+                        pass_unlearning=args.check, unlearning_lr=learning_rate)
 
     final_results = analyzer.run_clustering()
     cur_res = analyzer.report(final_results)
@@ -61,6 +61,7 @@ def parse_arguments(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', '-c', type=str, help='config file name', default='cifar1')
     parser.add_argument('--gpu', '-g', type=str, help='GPU id', default='0')
+    parser.add_argument('--check', action='store_true')
 
     args = parser.parse_args(argv)
 

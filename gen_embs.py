@@ -68,8 +68,8 @@ def main():
 
     print("Full embedding size: {}".format(full_size_of_embedding))
     size_kept = int(full_size_of_embedding * args.ratio)
-    if size_kept > 50000:
-        size_kept = 50000
+    if size_kept > 5000:
+        size_kept = 5000
 
     kept_mask = random.sample(list(range(full_size_of_embedding)), size_kept)
     gradient_list = np.zeros((number_train, size_kept))
