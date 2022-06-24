@@ -5,13 +5,10 @@ import gen_utils
 import keras
 from tensorflow.keras.utils import to_categorical
 
-from keras.layers import Dense, Activation
-from keras.models import Model
 from keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, Activation, Dropout, BatchNormalization
 from keras.models import Model
 from keras.models import Sequential
 from keras.regularizers import l2
-from wide_resnet import create_model
 
 
 class Task(object):
@@ -53,7 +50,9 @@ class Task(object):
 def get_model(dataset, load_clean=False):
     assert dataset == 'cifar'
     if load_clean:
-        model = keras.models.load_model("models/cifar_clean.h5")
+        # model = keras.models.load_model("models/cifar_cifar2_model.h5")
+        model = keras.models.load_model(
+            "/home/shansixioing/forensic/wide_resnets_keras-master/models/cifar_clean.h5")
     else:
         # model = create_model()
         model = get_cifar_model()
@@ -106,7 +105,6 @@ def get_cifar_model(softmax=True):
     if softmax:
         model.add(Activation('softmax'))
     return model
-
 
 
 def load_dataset(dataset, test_only=False):
