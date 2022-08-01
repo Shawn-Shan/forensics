@@ -5,17 +5,19 @@ This repository contains code implementation of the paper "[Poison Forensics: Tr
 This traceback tool for poison data is developed by researchers at [SANDLab](https://sandlab.cs.uchicago.edu/), University of Chicago.  
 
 ### Note
-The code base currently only support CIFAR10 dataset and BadNets attack. Adapting to new dataset is possible by editing the data loading and model loading code. 
+The code base currently only supports the CIFAR10 dataset and BadNets attack. Adapting to new datasets is possible by editing the data loading and model loading code. 
 
 ### DEPENDENCIES
 
-Our code is implemented and tested on Keras with TensorFlow backend. Following packages are used by our code.
+Our code is implemented and tested on Keras with TensorFlow backend. The following packages are used by our code.
 
 - `keras==2.4.3`
 - `numpy==1.19.5`
-- `tensorflow-gpu==2.4.1`
+- `tensorflow==2.4.1`
 
-Our code is tested on `Python 3.6.8`
+Please make sure to install the exact TensorFlow version. 
+
+Our code is tested with `Python 3.6.8`
 
 ### Steps to train a backdoored model and run traceback
 
@@ -33,11 +35,11 @@ The `--config` argument will load a config file under the `config` directory. Fe
 
 Running traceback leverages two scripts. `gen_embs.py` will generate the embedding needed for clustering and `run_traceback.py` performs traceback using generated embeddings and unlearning. 
 
-First, run `python3 gen_embs.py --config cifar2 --gpu 0` to generate embedding, which will be saved under `results/`. Then run `python3 run_traceback.py --config cifar2 --gpu 0`. It should perform clustering and pruning. The unlearning process will be printed out. At the end, it will output the final precision and recall. 
+First, run `python3 gen_embs.py --config cifar2 --gpu 0` to generate embedding, which will be saved under `results/`. Then run `python3 run_traceback.py --config cifar2 --gpu 0`. It should perform clustering and pruning. The unlearning process will be printed out. In the end, it will output the final precision and recall. 
 
-#### Things to keep in mind when adapting to new dataset/model
+#### Things to keep in mind when adapting to a new dataset/model
 
-- During unlearning process, make sure to set the training parameters identical to ones used during the initial model training. This includes augmentation, learning rate, and optimizers. If you found the unlearning process to be unstable, please reduce the learning rate or add gradient clipping. If the issue persist, please reach out to us via shawnshan@cs.uchicago.edu. 
+- During unlearning process, make sure to set the training parameters identical to the ones used during the initial model training. This includes augmentation, learning rate, and optimizers. If you found the unlearning process to be unstable, please reduce the learning rate or add gradient clipping. If the issue persists, please reach out to us via shawnshan@cs.uchicago.edu. 
 
 ### Citation
 ```
