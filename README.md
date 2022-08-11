@@ -43,7 +43,7 @@ First, run `python3 gen_embs.py --config cifar2 --gpu 0` to generate embedding, 
 
 ### Citation
 ```
-@inproceedings{shan2022traceback,
+@inproceedings{shan2022poison,
   title={Poison Forensics: Traceback of Data Poisoning Attacks in Neural Networks},
   author={Shan, Shawn and Bhagoji, Arjun Nitin and Zheng, Haitao and Zhao, Ben Y},
   journal={Proc. of USENIX Security},
