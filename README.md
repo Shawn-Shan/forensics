@@ -1,7 +1,7 @@
 # Traceback of Data Poisoning Attacks in Neural Networks
 ### ABOUT
 
-This repository contains code implementation of the paper "[Poison Forensics: Traceback of Data Poisoning Attacks in Neural Networks](https://www.shawnshan.com/files/publication/forensics.pdf)", at *USENIX Security 2022*. 
+This repository contains code implementation of the paper "[Poison Forensics: Traceback of Data Poisoning Attacks in Neural Networks](https://sandlab.cs.uchicago.edu/forensics/)", at *USENIX Security 2022*. 
 This traceback tool for poison data is developed by researchers at [SANDLab](https://sandlab.cs.uchicago.edu/), University of Chicago.  
 
 ### Note
